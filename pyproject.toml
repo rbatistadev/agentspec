@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentspec"
+version = "0.1.0"
+description = "Agent orchestration and harness tooling for OpenSpec-driven development."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "rbatistadev" }
+]
+dependencies = []
+
+[project.scripts]
+agentspec = "agentspec.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+agentspec = [
+    "integrations/**/*.md",
+    "integrations/**/*.yaml",
+    "integrations/**/*.yml"
+]
