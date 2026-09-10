@@ -54,6 +54,13 @@ class OpenCodeResourcesTests(unittest.TestCase):
             agents["agentspec-openspec-apply-worker.md"],
         )
 
+    def test_recon_agent_cannot_edit_or_delegate(self):
+        recon = load_managed_agents()["agentspec-openspec-recon.md"]
+
+        self.assertIn("action: edit", recon)
+        self.assertIn("action: subagent", recon)
+        self.assertGreaterEqual(recon.count("effect: deny"), 2)
+
     def test_orchestrator_routes_apply_to_the_apply_worker(self):
         orchestrator = load_managed_agents()[
             "agentspec-openspec-orchestrator.md"
