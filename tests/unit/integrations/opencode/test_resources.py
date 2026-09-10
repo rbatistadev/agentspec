@@ -100,5 +100,22 @@ class OpenCodeResourcesTests(unittest.TestCase):
                 os.chdir(original_directory)
 
 
+class AgentTemplateGateTests(unittest.TestCase):
+    def test_orchestrator_references_the_pipeline(self):
+        orchestrator = load_managed_agents()["agentspec-openspec-orchestrator.md"]
+
+        self.assertIn("agentspec openspec validate", orchestrator)
+
+    def test_taskwriter_references_the_pipeline(self):
+        taskwriter = load_managed_agents()["agentspec-openspec-taskwriter.md"]
+
+        self.assertIn("agentspec openspec validate", taskwriter)
+
+    def test_auditor_references_the_pipeline(self):
+        auditor = load_managed_agents()["agentspec-openspec-auditor.md"]
+
+        self.assertIn("agentspec openspec validate", auditor)
+
+
 if __name__ == "__main__":
     unittest.main()
