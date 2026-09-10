@@ -87,8 +87,10 @@ class OpenCodeResourcesTests(unittest.TestCase):
                 content.index(MANAGED_FILE_MARKER),
                 content.find("---", 3),
             )
-            self.assertIn("subagent: true", content)
-            self.assertIn("subtask: true", content)
+            runs_directly = path.endswith("/explore.md")
+            value = "false" if runs_directly else "true"
+            self.assertIn(f"subagent: {value}", content)
+            self.assertIn(f"subtask: {value}", content)
             expected_agent = (
                 "agentspec-openspec-auditor"
                 if path.endswith("/audit.md")

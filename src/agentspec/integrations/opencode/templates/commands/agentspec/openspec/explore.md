@@ -1,8 +1,8 @@
 ---
 description: Explore a problem or idea before OpenSpec planning
 agent: agentspec-openspec-orchestrator
-subagent: true
-subtask: true
+subagent: false
+subtask: false
 ---
 
 <!-- agentspec:managed -->
