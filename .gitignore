@@ -45,3 +45,12 @@ desktop.ini
 
 # --- Local indexes ---
 .codegraph/
+
+openspec
+!src/agentspec/integrations/opencode/templates/commands/agentspec/openspec/
+.opencode
+.agents
+skills-lock.json
+.claude
+
+data
