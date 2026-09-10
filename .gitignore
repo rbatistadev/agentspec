@@ -46,7 +46,7 @@ desktop.ini
 # --- Local indexes ---
 .codegraph/
 
-openspec
+openspec/*
 !src/agentspec/integrations/opencode/templates/commands/agentspec/openspec/
 .opencode
 .agents
