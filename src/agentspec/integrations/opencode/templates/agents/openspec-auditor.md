@@ -37,7 +37,7 @@ permissions:
     resource: "openspec validate *"
     effect: allow
   - action: shell
-    resource: "agentspec openspec tasks lint *"
+    resource: "agentspec openspec validate *"
     effect: allow
 ---
 <!-- agentspec:managed -->
@@ -92,11 +92,11 @@ Before auditing:
 
 1. Resolve the target change.
 
-2. Run the deterministic AgentSpec preflight:
+2. Run the deterministic AgentSpec pipeline preflight:
 
-   `agentspec openspec tasks lint --change "<change>" --json`
+   `agentspec openspec validate --change "<change>" --json`
 
-3. Interpret the deterministic preflight result BEFORE reading proposal, specs,
+3. Interpret the deterministic pipeline result BEFORE reading proposal, specs,
    design, or repository evidence.
 
    If exit code is `0` and `"status": "PASS"`:
@@ -113,13 +113,13 @@ Before auditing:
 
      `TASK_AUDIT_BLOCKED_BY_LINT`
 
-   - report the deterministic lint errors and warnings;
+   - report the deterministic pipeline errors and warnings;
    - set the next action to:
 
      `RUN_OPENSPEC_TASKWRITER`
 
-   The deterministic linter owns structural task-contract validation.
-   Do not spend semantic-auditor tokens rediscovering structural defects
+   The deterministic pipeline owns structural and evidence validation.
+   Do not spend semantic-auditor tokens rediscovering deterministic defects
    already reported by AgentSpec.
 
    If exit code is `2`:
@@ -130,7 +130,7 @@ Before auditing:
      `TASK_AUDIT_TOOL_ERROR`
 
    - report the tool error;
-   - do not search for the linter implementation manually;
+   - do not search for the harness implementation manually;
    - do not invoke Python scripts directly;
    - do not infer operating-system-specific paths.
 
@@ -708,17 +708,17 @@ Return only:
 
 `<change-name>`
 
-## Deterministic lint errors
+## Deterministic pipeline errors
 
-Copy each lint error code and message exactly from the AgentSpec result.
+Copy each pipeline error code and message exactly from the AgentSpec result.
 
 If none:
 
 - none
 
-## Deterministic lint warnings
+## Deterministic pipeline warnings
 
-Copy each lint warning code and message exactly from the AgentSpec result.
+Copy each pipeline warning code and message exactly from the AgentSpec result.
 
 If none:
 

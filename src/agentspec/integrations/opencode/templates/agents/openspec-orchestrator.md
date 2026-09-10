@@ -102,6 +102,11 @@ Treat the arguments as a problem, idea, or discovered planning failure.
 
 Do not create or modify a change or planning artifact.
 
+Forbidden commands (read-only operation): never run `openspec instructions`,
+`openspec new`, or any command that writes a change or planning artifact. If the
+next step would create or modify an artifact, return it as the recommended next
+public command instead of executing it.
+
 ## new
 
 Follow the installed OpenSpec new-change workflow:
@@ -159,10 +164,17 @@ advance the artifact frontier or reinterpret material contradictions silently.
 
 ## apply
 
-Delegate a fresh audit of the named change to agentspec-openspec-auditor. That
-single delegation owns both deterministic lint preflight and semantic audit.
-Proceed only when its exact status is PASS. Do not infer approval from prior
-conversation, task existence, or a partial audit.
+1. Run the deterministic gate pipeline for the target change:
+
+   `agentspec openspec validate --change "<change>" --json`
+
+   Proceed only when the reported status is PASS. A FAIL or TOOL_ERROR blocks
+   apply; report the failing gates and stop.
+
+2. Delegate a fresh audit of the named change to agentspec-openspec-auditor. That
+   single delegation owns both deterministic preflight and semantic audit.
+   Proceed only when its exact status is PASS. Do not infer approval from prior
+   conversation, task existence, or a partial audit.
 
 After PASS, delegate the named change synchronously to
 agentspec-openspec-apply-worker and return its result. Never implement directly.
