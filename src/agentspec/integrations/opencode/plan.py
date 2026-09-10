@@ -19,6 +19,7 @@ class PlanAction(str, Enum):
     UPDATE = "UPDATE"
     NO_CHANGE = "NO_CHANGE"
     BLOCKED = "BLOCKED"
+    DELETE = "DELETE"
 
 
 @dataclass(frozen=True)
@@ -34,8 +35,12 @@ class FilePlan:
 class OpenCodePlan:
     config_dir: Path
     agents_md: FilePlan
+
     agents_dir: Path
     agents: tuple[FilePlan, ...]
+
+    commands_dir: Path
+    commands: tuple[FilePlan, ...]
 
 
 def content_digest(content: str) -> str:
@@ -101,8 +106,11 @@ def build_plan(
     paths: AgentSpecPaths,
     global_instructions: str,
     managed_agents: dict[str, str] | None = None,
+    managed_commands: dict[str, str] | None = None,
+    stale_managed_commands: tuple[str, ...] = (),
 ) -> OpenCodePlan:
     managed_agents = managed_agents or {}
+    managed_commands = managed_commands or {}
 
     agent_plans = tuple(
         _plan_managed_file(
@@ -110,6 +118,24 @@ def build_plan(
             content,
         )
         for filename, content in managed_agents.items()
+    )
+
+    current_command_plans = tuple(
+        _plan_managed_file(
+            paths.opencode_commands_dir / relative_path,
+            content,
+        )
+        for relative_path, content in managed_commands.items()
+    )
+    stale_command_plans = tuple(
+        plan
+        for relative_path in stale_managed_commands
+        if (
+            plan := _plan_stale_managed_file(
+                paths.opencode_commands_dir / relative_path
+            )
+        )
+        is not None
     )
 
     return OpenCodePlan(
@@ -120,7 +146,10 @@ def build_plan(
         ),
         agents_dir=paths.opencode_agents_dir,
         agents=agent_plans,
+        commands_dir=paths.opencode_commands_dir,
+        commands=current_command_plans + stale_command_plans,
     )
+
 
 def _plan_managed_file(
     path: Path,
@@ -170,5 +199,30 @@ def _plan_managed_file(
         action=PlanAction.UPDATE,
         reason="AgentSpec managed file differs from desired state.",
         desired_content=desired_content,
+        current_digest=digest,
+    )
+
+
+def _plan_stale_managed_file(path: Path) -> FilePlan | None:
+    if not path.exists():
+        return None
+
+    current = _read_text(path)
+    digest = content_digest(current)
+
+    if MANAGED_FILE_MARKER not in current:
+        return FilePlan(
+            path=path,
+            action=PlanAction.BLOCKED,
+            reason="Obsolete target exists but is not marked as owned by AgentSpec.",
+            desired_content=None,
+            current_digest=digest,
+        )
+
+    return FilePlan(
+        path=path,
+        action=PlanAction.DELETE,
+        reason="Obsolete AgentSpec-managed resource must be removed.",
+        desired_content=None,
         current_digest=digest,
     )

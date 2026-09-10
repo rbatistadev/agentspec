@@ -4,8 +4,10 @@ from agentspec.core.paths import resolve_paths
 from agentspec.integrations.opencode.apply import ApplyError, apply_plan
 from agentspec.integrations.opencode.plan import PlanAction, build_plan
 from agentspec.integrations.opencode.resources import (
+    STALE_MANAGED_COMMANDS,
     load_global_instructions,
     load_managed_agents,
+    load_managed_commands,
 )
 
 
@@ -19,10 +21,10 @@ def _print_plan(plan) -> None:
     )
     print(f"  {plan.agents_md.reason}")
 
-    for agent in plan.agents:
+    for resource in (*plan.agents, *plan.commands):
         print()
-        print(f"{agent.action.value}: {agent.path}")
-        print(f"  {agent.reason}")
+        print(f"{resource.action.value}: {resource.path}")
+        print(f"  {resource.reason}")
 
 
 def run(*, dry_run: bool) -> int:
@@ -32,6 +34,8 @@ def run(*, dry_run: bool) -> int:
         paths,
         load_global_instructions(),
         load_managed_agents(),
+        load_managed_commands(),
+        STALE_MANAGED_COMMANDS,
     )
 
     print("AgentSpec setup")
@@ -43,12 +47,9 @@ def run(*, dry_run: bool) -> int:
 
     _print_plan(plan)
 
-    blocked = (
-        plan.agents_md.action == PlanAction.BLOCKED
-        or any(
-            agent.action == PlanAction.BLOCKED
-            for agent in plan.agents
-        )
+    blocked = plan.agents_md.action == PlanAction.BLOCKED or any(
+        resource.action == PlanAction.BLOCKED
+        for resource in (*plan.agents, *plan.commands)
     )
 
     if blocked:

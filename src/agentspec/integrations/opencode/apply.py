@@ -33,17 +33,18 @@ def _verify_precondition(plan: FilePlan) -> None:
             )
         return
 
-    if plan.action == PlanAction.UPDATE:
+    if plan.action in {PlanAction.UPDATE, PlanAction.DELETE}:
         if current is None:
             raise ApplyError(
-                f"Refusing to update {plan.path}: file disappeared after planning."
+                f"Refusing to {plan.action.value.lower()} {plan.path}: "
+                "file disappeared after planning."
             )
 
         current_digest = content_digest(current)
 
         if current_digest != plan.current_digest:
             raise ApplyError(
-                f"Refusing to update {plan.path}: "
+                f"Refusing to {plan.action.value.lower()} {plan.path}: "
                 "file changed after planning."
             )
 
@@ -82,6 +83,11 @@ def _apply_file(plan: FilePlan) -> None:
     if plan.action == PlanAction.NO_CHANGE:
         return
 
+    if plan.action == PlanAction.DELETE:
+        _verify_precondition(plan)
+        plan.path.unlink()
+        return
+
     if plan.desired_content is None:
         raise ApplyError(
             f"Plan for {plan.path} has no desired content."
@@ -96,3 +102,6 @@ def apply_plan(plan: OpenCodePlan) -> None:
 
     for agent in plan.agents:
         _apply_file(agent)
+
+    for command in plan.commands:
+        _apply_file(command)

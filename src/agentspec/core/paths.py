@@ -14,6 +14,7 @@ class AgentSpecPaths:
     opencode_config_file: Path
     opencode_agents_dir: Path
     opencode_agents_md: Path
+    opencode_commands_dir: Path
 
 
 def _env_path(name: str) -> Path | None:
@@ -81,5 +82,6 @@ def resolve_paths() -> AgentSpecPaths:
         opencode_config_dir=opencode_dir,
         opencode_config_file=opencode_dir / "opencode.json",
         opencode_agents_dir=opencode_dir / "agents",
-        opencode_agents_md=opencode_dir / "AGENTS.md"
+        opencode_agents_md=opencode_dir / "AGENTS.md",
+        opencode_commands_dir=opencode_dir / "commands",
     )
