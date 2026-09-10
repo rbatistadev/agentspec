@@ -617,25 +617,25 @@ After writing:
 
    `openspec status --change "<change>" --json`
 
-2. run the deterministic task linter:
+2. run the deterministic gate pipeline:
 
-   `agentspec openspec tasks lint --change "<change>" --json`
+   `agentspec openspec validate --change "<change>" --json`
 
-3. inspect the linter result.
+3. inspect the pipeline result.
 
-If the linter returns:
+If the pipeline returns:
 
 - exit code `0` and `"status": "PASS"`:
   continue.
 
 - exit code `1` or `"status": "FAIL"`:
-  fix ONLY the structural/task-contract defects reported by the linter;
-  rerun the linter;
+  fix ONLY the defects reported by the pipeline;
+  rerun the pipeline;
   repeat until PASS.
 
 - exit code `2`:
   STOP and report `TASK_LINTER_ERROR`.
-  Do not guess around an unavailable or broken linter.
+  Do not guess around an unavailable or broken harness.
 
 4. run:
 
@@ -649,9 +649,9 @@ If the linter returns:
 
 You MUST NOT report `TASKS_WRITTEN` unless:
 
-`agentspec openspec tasks lint --change "<change>" --json`
+`agentspec openspec validate --change "<change>" --json`
 
-passes successfully.
+reports `"status": "PASS"`.
 
 The AgentSpec CLI is the public interface to the harness and must be available on PATH.
 

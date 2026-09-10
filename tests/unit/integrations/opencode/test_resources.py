@@ -54,6 +54,13 @@ class OpenCodeResourcesTests(unittest.TestCase):
             agents["agentspec-openspec-apply-worker.md"],
         )
 
+    def test_recon_agent_cannot_edit_or_delegate(self):
+        recon = load_managed_agents()["agentspec-openspec-recon.md"]
+
+        self.assertIn("action: edit", recon)
+        self.assertIn("action: subagent", recon)
+        self.assertGreaterEqual(recon.count("effect: deny"), 2)
+
     def test_orchestrator_routes_apply_to_the_apply_worker(self):
         orchestrator = load_managed_agents()[
             "agentspec-openspec-orchestrator.md"
@@ -80,8 +87,10 @@ class OpenCodeResourcesTests(unittest.TestCase):
                 content.index(MANAGED_FILE_MARKER),
                 content.find("---", 3),
             )
-            self.assertIn("subagent: true", content)
-            self.assertIn("subtask: true", content)
+            runs_directly = path.endswith("/explore.md")
+            value = "false" if runs_directly else "true"
+            self.assertIn(f"subagent: {value}", content)
+            self.assertIn(f"subtask: {value}", content)
             expected_agent = (
                 "agentspec-openspec-auditor"
                 if path.endswith("/audit.md")
@@ -98,6 +107,23 @@ class OpenCodeResourcesTests(unittest.TestCase):
                 self.assertEqual(set(load_managed_commands()), EXPECTED_COMMANDS)
             finally:
                 os.chdir(original_directory)
+
+
+class AgentTemplateGateTests(unittest.TestCase):
+    def test_orchestrator_references_the_pipeline(self):
+        orchestrator = load_managed_agents()["agentspec-openspec-orchestrator.md"]
+
+        self.assertIn("agentspec openspec validate", orchestrator)
+
+    def test_taskwriter_references_the_pipeline(self):
+        taskwriter = load_managed_agents()["agentspec-openspec-taskwriter.md"]
+
+        self.assertIn("agentspec openspec validate", taskwriter)
+
+    def test_auditor_references_the_pipeline(self):
+        auditor = load_managed_agents()["agentspec-openspec-auditor.md"]
+
+        self.assertIn("agentspec openspec validate", auditor)
 
 
 if __name__ == "__main__":

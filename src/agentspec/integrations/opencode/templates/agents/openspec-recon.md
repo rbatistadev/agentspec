@@ -2,6 +2,25 @@
 description: OpenSpec E1 reconnaissance agent. Collects verified repository evidence before planning. Read-only; never designs or implements.
 mode: subagent
 model: opencode-go/deepseek-v4-flash
+permissions:
+  - action: edit
+    resource: "*"
+    effect: deny
+  - action: subagent
+    resource: "*"
+    effect: deny
+  - action: shell
+    resource: "*"
+    effect: ask
+  - action: shell
+    resource: "codegraph *"
+    effect: allow
+  - action: shell
+    resource: "git status*"
+    effect: allow
+  - action: shell
+    resource: "git diff*"
+    effect: allow
 ---
 <!-- agentspec:managed -->
 
