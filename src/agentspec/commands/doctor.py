@@ -1,12 +1,19 @@
 from __future__ import annotations
-from agentspec.integrations.opencode.plan import build_plan
-from agentspec.integrations.opencode.resources import (
-    load_global_instructions,
-)
 
 import shutil
 
 from agentspec.core.paths import resolve_paths
+from agentspec.integrations.codex.paths import resolve_codex_paths
+from agentspec.integrations.codex.plan import build_plan as build_codex_plan
+from agentspec.integrations.codex.resources import (
+    load_global_instructions as load_codex_global_instructions,
+)
+from agentspec.integrations.opencode.plan import (
+    build_plan as build_opencode_plan,
+)
+from agentspec.integrations.opencode.resources import (
+    load_global_instructions,
+)
 
 
 def _check_command(name: str) -> bool:
@@ -17,13 +24,19 @@ def run() -> int:
     checks = {
         "openspec": _check_command("openspec"),
         "opencode": _check_command("opencode"),
+        "codex": _check_command("codex"),
         "git": _check_command("git"),
     }
 
     paths = resolve_paths()
-    opencode_plan = build_plan(
+    codex_paths = resolve_codex_paths()
+    opencode_plan = build_opencode_plan(
         paths,
         load_global_instructions(),
+    )
+    codex_plan = build_codex_plan(
+        codex_paths,
+        load_codex_global_instructions(),
     )
 
     print("AgentSpec doctor")
@@ -40,12 +53,21 @@ def run() -> int:
     print(f"OpenSpec config: {paths.openspec_config_file}")
     print(f"OpenCode config: {paths.opencode_config_file}")
     print(f"OpenCode agents: {paths.opencode_agents_dir}")
+    print(f"Codex config: {codex_paths.config_file}")
+    print(f"Codex agents: {codex_paths.agents_dir}")
+    print(f"Codex skills: {codex_paths.skills_dir}")
 
-    print()
-    print("OpenCode integration")
-    print()
-    print(f"AGENTS.md: {opencode_plan.agents_md.action.value}")
-    print(f"  Path: {opencode_plan.agents_md.path}")
-    print(f"  Reason: {opencode_plan.agents_md.reason}")
+    for title, plan in (
+        ("OpenCode", opencode_plan),
+        ("Codex", codex_plan),
+    ):
+        print()
+        print(f"{title} integration")
+        print()
+        print(f"AGENTS.md: {plan.agents_md.action.value}")
+        print(f"  Path: {plan.agents_md.path}")
+        print(f"  Reason: {plan.agents_md.reason}")
 
-    return 0 if all(checks.values()) else 1
+    required = checks["openspec"] and checks["git"]
+    supported_host = checks["opencode"] or checks["codex"]
+    return 0 if required and supported_host else 1
