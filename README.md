@@ -20,36 +20,38 @@
 
 `agentspec` is a command-line tool that installs and maintains a standardized
 agent harness on top of your existing [OpenSpec](https://github.com/Fission-AI/OpenSpec)
-and [OpenCode](https://opencode.ai) setup. It gives every agent in your
+setup for [OpenCode](https://opencode.ai) and
+[Codex](https://developers.openai.com/codex/). It gives every agent in your
 development process a shared, deterministic set of instructions and
 integration files, so the whole team (human and machine) follows the same
 rules.
 
-It does **not** replace OpenSpec or OpenCode — it sits alongside them and
+It does **not** replace OpenSpec, OpenCode, or Codex — it sits alongside them and
 manages the reusable configuration they consume.
 
 ## Features
 
 - **Managed harness files** — installs and keeps up to date a global
-  `AGENTS.md` section plus a set of OpenCode subagents, using non-destructive
-  managed blocks that never overwrite your own content.
+  `AGENTS.md` section plus native agents and commands/skills for OpenCode and
+  Codex, without overwriting user-owned files.
 - **OpenSpec agent pipeline** — ships ready-made subagents for the
   recon → reason → architect → task-writer → auditor flow
   (`openspec-recon`, `openspec-reason`, `openspec-architect`,
   `openspec-taskwriter`, `openspec-auditor`).
 - **`tasks.md` strict linter** — a deterministic structural linter for
   OpenSpec `tasks.md` execution packets, with human-readable or JSON output.
-- **Environment diagnostics** — `doctor` checks that `openspec`, `opencode`,
-  and `git` are present and reports the resolved configuration paths.
+- **Environment diagnostics** — `doctor` checks OpenSpec, Git, OpenCode, and
+  Codex, and reports the resolved configuration paths.
 - **Safe by default** — `setup --dry-run` shows exactly what would change,
   and refuses to modify files that are not marked as owned by AgentSpec.
 
 ## Requirements
 
 - Python **3.11** or later
-- [OpenCode](https://opencode.ai) CLI
 - [OpenSpec](https://github.com/Fission-AI/OpenSpec) CLI
 - [Git](https://git-scm.com/)
+- At least one host: [OpenCode](https://opencode.ai) CLI or
+  [Codex CLI](https://developers.openai.com/codex/cli/)
 
 ## Installation
 
@@ -84,12 +86,18 @@ agentspec doctor
 
 ### `agentspec setup`
 
-Install or update the AgentSpec-managed harness files (the global `AGENTS.md`
-block and the OpenCode subagents). Preview the changes first with `--dry-run`:
+Install or update the AgentSpec-managed harness files. OpenCode remains the
+default target for backward compatibility; select Codex or both hosts with
+`--target`. Preview changes first with `--dry-run`:
 
 ```bash
 agentspec setup --dry-run
 agentspec setup
+
+agentspec setup --target codex --dry-run
+agentspec setup --target codex
+
+agentspec setup --target all
 ```
 
 ### `agentspec openspec tasks lint`
@@ -116,17 +124,20 @@ consistency. Exit code `0` means pass, `1` means errors were found.
 
 ## How it works
 
-`agentspec` resolves the machine-level configuration directories for OpenSpec
-and OpenCode (honoring `XDG_CONFIG_HOME`, `APPDATA`, and
-`OPENCODE_CONFIG_DIR`), then computes a plan of what should exist in the
-OpenCode config directory:
+`agentspec` computes a safe plan for the selected host:
 
-- a managed section in the global `AGENTS.md`;
-- one managed file per bundled subagent (each carrying an
-  `<!-- agentspec:managed -->` marker).
+- OpenCode: global `AGENTS.md`, agents, and commands under its configuration
+  directory.
+- Codex: global `AGENTS.md` and custom agents under `CODEX_HOME` (default
+  `~/.codex`), plus user skills under `~/.agents/skills`.
+
+Codex agents and skills are generated from the existing OpenCode workflow
+templates. Models are intentionally omitted so Codex agents inherit the
+parent session's model and reasoning settings.
 
 Each managed file is only created or updated if it is either absent or already
-owned by AgentSpec, so your own configuration is never clobbered.
+owned by AgentSpec. The managed `AGENTS.md` block preserves all surrounding
+content.
 
 ## Project structure
 
@@ -138,6 +149,7 @@ src/agentspec/
   harness/openspec/      # tasks.md strict linter
   integrations/
     opencode/            # plan/apply logic + agent templates
+    codex/               # Codex paths, rendering, plan/apply logic
     openspec/            # OpenSpec base configuration templates
 tests/
   unit/                  # unittest-based unit tests
