@@ -7,7 +7,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from agentspec.commands import doctor, setup
-from agentspec.harness.openspec import pipeline, tasks_lint
+from agentspec.harness.openspec import guard, pipeline, tasks_lint
 
 
 def get_version() -> str:
@@ -88,6 +88,13 @@ def build_parser() -> argparse.ArgumentParser:
         add_help=False,
     )
 
+    # guard owns the arguments after this point.
+    openspec_subparsers.add_parser(
+        "guard",
+        help="Flag active changes whose tasks.md is not strict-v1.",
+        add_help=False,
+    )
+
     return parser
 
 
@@ -100,7 +107,8 @@ def validate_command(args: argparse.Namespace) -> int:
 
     if repo_root is None:
         print(
-            "ERROR: Could not find an OpenSpec repository root from the current directory.",
+            "ERROR: Could not find an OpenSpec repository root from the "
+            "current directory.",
             file=sys.stderr,
         )
         return 2
@@ -119,24 +127,17 @@ def main() -> int:
 
     if args.command == "doctor":
         if remaining:
-            parser.error(
-                f"unrecognized arguments: {' '.join(remaining)}"
-            )
+            parser.error(f"unrecognized arguments: {' '.join(remaining)}")
 
         return doctor.run()
 
     if args.command == "setup":
         if remaining:
-            parser.error(
-                f"unrecognized arguments: {' '.join(remaining)}"
-            )
+            parser.error(f"unrecognized arguments: {' '.join(remaining)}")
 
         return setup.run(dry_run=args.dry_run)
 
-    if (
-        args.command == "openspec"
-        and args.openspec_command == "validate"
-    ):
+    if args.command == "openspec" and args.openspec_command == "validate":
         return validate_command(args)
 
     if (
@@ -148,6 +149,9 @@ def main() -> int:
             remaining,
             prog="agentspec openspec tasks lint",
         )
+
+    if args.command == "openspec" and args.openspec_command == "guard":
+        return guard.main(remaining, prog="agentspec openspec guard")
 
     parser.print_help()
     return 0
