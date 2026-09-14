@@ -51,9 +51,7 @@ def upsert_managed_block(
         )
 
     if start_count > 1:
-        raise ManagedBlockError(
-            f"Multiple managed blocks found for '{block_id}'"
-        )
+        raise ManagedBlockError(f"Multiple managed blocks found for '{block_id}'")
 
     if start_count == 1:
         pattern = re.compile(

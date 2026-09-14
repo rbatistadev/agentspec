@@ -76,9 +76,7 @@ def _atomic_write(path: Path, content: str) -> None:
 
 def _apply_file(plan: FilePlan) -> None:
     if plan.action == PlanAction.BLOCKED:
-        raise ApplyError(
-            f"Cannot apply blocked plan for {plan.path}: {plan.reason}"
-        )
+        raise ApplyError(f"Cannot apply blocked plan for {plan.path}: {plan.reason}")
 
     if plan.action == PlanAction.NO_CHANGE:
         return
@@ -89,9 +87,7 @@ def _apply_file(plan: FilePlan) -> None:
         return
 
     if plan.desired_content is None:
-        raise ApplyError(
-            f"Plan for {plan.path} has no desired content."
-        )
+        raise ApplyError(f"Plan for {plan.path} has no desired content.")
 
     _verify_precondition(plan)
     _atomic_write(plan.path, plan.desired_content)
