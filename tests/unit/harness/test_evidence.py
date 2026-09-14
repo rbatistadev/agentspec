@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 from agentspec.harness.openspec import evidence
@@ -132,7 +133,9 @@ class EvidenceCoverageTests(unittest.TestCase):
             }
         )
 
-        matches = [issue for issue in issues if issue.code == "EVIDENCE_UNRESOLVED_SPEC"]
+        matches = [
+            issue for issue in issues if issue.code == "EVIDENCE_UNRESOLVED_SPEC"
+        ]
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0].severity, "ERROR")
 
@@ -162,17 +165,23 @@ class EvidenceCoverageTests(unittest.TestCase):
             }
         )
 
-        matches = [issue for issue in issues if issue.code == "EVIDENCE_UNRESOLVED_DESIGN"]
+        matches = [
+            issue for issue in issues if issue.code == "EVIDENCE_UNRESOLVED_DESIGN"
+        ]
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0].severity, "ERROR")
 
     def test_design_heading_with_backticks_resolves(self):
-        self._write_design("D3 — One pipeline entry point: `agentspec openspec validate`")
+        self._write_design(
+            "D3 — One pipeline entry point: `agentspec openspec validate`"
+        )
 
         issues = self._run(
             {
                 "design contract": [
-                    "- `design.md` → `D3 — One pipeline entry point: agentspec openspec validate` — note",
+                    "- `design.md` → `D3 — One pipeline entry point: "
+                    "agentspec openspec "
+                    "validate` — note",
                 ],
             }
         )
@@ -194,9 +203,7 @@ class EvidenceCoverageTests(unittest.TestCase):
             }
         )
 
-        self.assertFalse(
-            any(issue.code == "EVIDENCE_MISSING_FILE" for issue in issues)
-        )
+        self.assertFalse(any(issue.code == "EVIDENCE_MISSING_FILE" for issue in issues))
 
     def test_nonexistent_file_produces_fail(self):
         issues = self._run(
@@ -261,9 +268,53 @@ class EvidenceCoverageTests(unittest.TestCase):
             patch_which=None,
         )
 
-        matches = [issue for issue in issues if issue.code == "EVIDENCE_COMMAND_UNRESOLVED"]
+        matches = [
+            issue for issue in issues if issue.code == "EVIDENCE_COMMAND_UNRESOLVED"
+        ]
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0].severity, "WARNING")
+
+    def test_uncovered_scenario_produces_warning(self):
+        self._write_spec("Nobody references me")
+
+        issues = self._run({})
+
+        matches = [
+            issue for issue in issues if issue.code == "EVIDENCE_UNCOVERED_SCENARIO"
+        ]
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0].severity, "WARNING")
+
+    def test_referenced_scenario_produces_no_uncovered_warning(self):
+        self._write_spec("Covered scenario")
+
+        issues = self._run(
+            {
+                "spec contract": [
+                    "- `specs/test/spec.md` → `Scenario: Covered scenario`",
+                ],
+            }
+        )
+
+        self.assertFalse(
+            any(issue.code == "EVIDENCE_UNCOVERED_SCENARIO" for issue in issues)
+        )
+
+    def test_deferred_scenario_is_exempt(self):
+        spec_dir = self.change_root / "specs" / "test"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        (spec_dir / "spec.md").write_text(
+            "## ADDED Requirements\n\n"
+            "#### Scenario: Deferred scenario\n"
+            "<!-- deferred-scenario: Deferred scenario -->\n",
+            encoding="utf-8",
+        )
+
+        issues = self._run({})
+
+        self.assertFalse(
+            any(issue.code == "EVIDENCE_UNCOVERED_SCENARIO" for issue in issues)
+        )
 
     def test_fabricated_reference_produces_fail(self):
         self._write_spec("Real scenario")
@@ -272,7 +323,8 @@ class EvidenceCoverageTests(unittest.TestCase):
         issues = self._run(
             {
                 "spec contract": [
-                    "- `specs/test/spec.md` → `Requirement: R` → `Scenario: Fabricated`",
+                    "- `specs/test/spec.md` → `Requirement: R` → `Scenario: "
+                    "Fabricated`",
                 ],
                 "design contract": [
                     "- `design.md` → `D9 Fabricated` — note",

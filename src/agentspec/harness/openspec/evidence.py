@@ -15,6 +15,9 @@ SPEC_SCENARIO_HEADING_RE = re.compile(r"^####\s+Scenario:\s*(.+?)\s*$")
 DESIGN_HEADING_RE = re.compile(r"^(?:##|###)\s+(.+?)\s*$")
 
 SCENARIO_REF_RE = re.compile(r"`\s*Scenario:\s*([^`]+?)\s*`", re.IGNORECASE)
+DEFERRED_SCENARIO_RE = re.compile(
+    r"<!--\s*deferred-scenario:\s*(.+?)\s*-->", re.IGNORECASE
+)
 DESIGN_REF_RE = re.compile(
     r"`\s*design\.md\s*`\s*(?:\u2192|->)\s*`\s*([^`]+?)\s*`",
     re.IGNORECASE,
@@ -55,6 +58,22 @@ def _spec_scenario_headings(change_root: Path) -> set[str]:
     return headings
 
 
+def _deferred_scenarios(change_root: Path) -> set[str]:
+    deferred: set[str] = set()
+    specs_dir = change_root / "specs"
+
+    if not specs_dir.is_dir():
+        return deferred
+
+    for spec_path in specs_dir.glob("**/*.md"):
+        for line in spec_path.read_text(encoding="utf-8").splitlines():
+            match = DEFERRED_SCENARIO_RE.search(line)
+            if match:
+                deferred.add(_normalize_reference(match.group(1)))
+
+    return deferred
+
+
 def _design_headings(change_root: Path) -> set[str]:
     headings: set[str] = set()
     design_path = change_root / "design.md"
@@ -83,10 +102,37 @@ def _check_spec_references(
                     issues,
                     "ERROR",
                     "EVIDENCE_UNRESOLVED_SPEC",
-                    f"Spec scenario '{name}' does not resolve to any '#### Scenario:' heading.",
+                    f"Spec scenario '{name}' does not resolve to any "
+                    "'#### Scenario:' heading.",
                     line=packet.start_line,
                     task=packet.task_id,
                 )
+
+
+def _check_scenario_coverage(
+    packets: list[TaskPacket],
+    scenario_headings: set[str],
+    deferred: set[str],
+    issues: list[Issue],
+) -> None:
+    referenced: set[str] = set()
+
+    for packet in packets:
+        for line in packet.sections.get("spec contract", []):
+            for match in SCENARIO_REF_RE.finditer(line):
+                name = _normalize_reference(match.group(1))
+                if name:
+                    referenced.add(name)
+
+    for heading in sorted(scenario_headings - referenced - deferred):
+        add_issue(
+            issues,
+            "WARNING",
+            "EVIDENCE_UNCOVERED_SCENARIO",
+            f"Spec scenario '{heading}' is not referenced by any task's Spec contract.",
+            line=None,
+            task=None,
+        )
 
 
 def _check_design_references(
@@ -102,7 +148,8 @@ def _check_design_references(
                     issues,
                     "ERROR",
                     "EVIDENCE_UNRESOLVED_DESIGN",
-                    f"Design heading '{heading}' does not resolve to any heading in design.md.",
+                    f"Design heading '{heading}' does not resolve to any "
+                    "heading in design.md.",
                     line=packet.start_line,
                     task=packet.task_id,
                 )
@@ -142,7 +189,8 @@ def _check_allowed_files(
                     issues,
                     "ERROR",
                     "EVIDENCE_MISSING_PARENT",
-                    f"Allowed file '{rel}' is marked CREATE but its parent directory does not exist.",
+                    f"Allowed file '{rel}' is marked CREATE but its parent "
+                    "directory does not exist.",
                     line=packet.start_line,
                     task=packet.task_id,
                 )
@@ -183,7 +231,8 @@ def _check_verification_command(
             issues,
             "WARNING",
             "EVIDENCE_COMMAND_UNRESOLVED",
-            f"Primary verification command '{command}' references an executable that does not resolve on PATH.",
+            f"Primary verification command '{command}' references an "
+            "executable that does not resolve on PATH.",
             line=packet.start_line,
             task=packet.task_id,
         )
@@ -198,9 +247,12 @@ def collect_evidence_issues(
     repo_root = Path(repo_root)
 
     scenario_headings = _spec_scenario_headings(change_root)
+    deferred = _deferred_scenarios(change_root)
     design_headings = _design_headings(change_root)
 
     issues: list[Issue] = []
+
+    _check_scenario_coverage(packets, scenario_headings, deferred, issues)
 
     for packet in packets:
         _check_spec_references(packet, scenario_headings, issues)
