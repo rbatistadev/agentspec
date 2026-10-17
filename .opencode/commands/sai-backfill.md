@@ -1,0 +1,12 @@
+---
+description: Reconstruct proposal.md and capability specs from an already-implemented diff, for a change that skipped the SAI workflow.
+model: opencode-go/muse-spark-1.3-contributor#xhigh
+---
+Fetch @~/.config/opencode/skills/fetch/SKILL.md before you continue.
+Fetch @sai/adapters/opencode/boot.md and follow it.
+Required capability profile: backfill-command.
+Fetch @sai/commands/backfill/command-bootstrap.md and follow those instructions exactly, forwarding the InvocationEnvelope block below.
+
+InvocationEnvelope:
+  command_name: backfill
+  arguments_value: $ARGUMENTS
