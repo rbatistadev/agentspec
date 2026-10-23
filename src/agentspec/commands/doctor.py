@@ -1,12 +1,12 @@
 from __future__ import annotations
-from agentspec.integrations.opencode.plan import build_plan
-from agentspec.integrations.opencode.resources import (
-    load_global_instructions,
-)
 
 import shutil
 
 from agentspec.core.paths import resolve_paths
+from agentspec.integrations.opencode.plan import build_plan
+from agentspec.integrations.opencode.resources import (
+    load_global_instructions,
+)
 
 
 def _check_command(name: str) -> bool:

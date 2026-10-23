@@ -12,9 +12,25 @@ from pathlib import Path
 
 TASK_CONTRACT_VERSION = "strict-v1"
 
+CANONICAL_AREAS = frozenset(
+    {
+        "web",
+        "api",
+        "database",
+        "shared",
+        "cross-stack",
+        "cli",
+        "harness",
+        "templates",
+        "tests",
+        "docs",
+        "integration",
+    }
+)
+
 GROUP_RE = re.compile(r"^##\s+(\d+)\.\s+(.+?)\s*$")
 TASK_RE = re.compile(
-    r"^###\s+Task\s+(\d+\.\d+)\s+(?:—|–|-)\s+(.+?)\s*$",
+    r"^###\s+Task\s+(\d+\.\d+)\s+(?:—|–|-)\s+(.+?)\s*$",  # noqa: RUF001
     re.IGNORECASE,
 )
 SECTION_RE = re.compile(r"^\*\*(.+?)\*\*\s*$")
@@ -105,7 +121,7 @@ def normalize_section(name: str) -> str:
     return re.sub(r"\s+", " ", name.strip().lower())
 
 
-def add_issue(
+def add_issue(  # noqa: PLR0913
     issues: list[Issue],
     severity: str,
     code: str,
@@ -404,6 +420,18 @@ def validate_checkbox(
                 line=line_no,
                 task=task.task_id,
             )
+        elif area.lower() not in CANONICAL_AREAS:
+            add_issue(
+                issues,
+                "WARNING",
+                "NON_CANONICAL_AREA",
+                (
+                    f"Area token '{area}' in task {task.task_id} is not in the "
+                    "canonical area-token set."
+                ),
+                line=line_no,
+                task=task.task_id,
+            )
 
         if not command:
             add_issue(
@@ -506,7 +534,8 @@ def validate_contract_sections(
                 issues,
                 "WARNING",
                 "BROAD_SCOPE_GLOB",
-                "Scope contains a wildcard/glob; verify that the broad scope is justified.",
+                "Scope contains a wildcard/glob; verify that the "
+                "broad scope is justified.",
                 line=task.start_line,
                 task=task.task_id,
             )
@@ -532,7 +561,7 @@ def validate_contract_sections(
                 task=task.task_id,
             )
 
-    if stop and count_list_items(stop) < 3:
+    if stop and count_list_items(stop) < 3:  # noqa: PLR2004
         add_issue(
             issues,
             "WARNING",
@@ -547,14 +576,14 @@ def validate_contract_sections(
 
     read_count = count_list_items(read_before)
 
-    if read_count > 6:
+    if read_count > 6:  # noqa: PLR2004
         add_issue(
             issues,
             "WARNING",
             "LARGE_READ_SET",
             (
                 f"Read before editing contains {read_count} items. "
-                "Target 2–6 when possible to keep worker context narrow."
+                "Target 2–6 when possible to keep worker context narrow."  # noqa: RUF001
             ),
             line=task.start_line,
             task=task.task_id,
@@ -662,7 +691,7 @@ def validate_dependencies(
     stack: list[str] = []
 
     def visit(task_id: str) -> None:
-        if state[task_id] == 2:
+        if state[task_id] == 2:  # noqa: PLR2004
             return
 
         if state[task_id] == 1:
@@ -671,7 +700,7 @@ def validate_dependencies(
             except ValueError:
                 start = 0
 
-            cycle = stack[start:] + [task_id]
+            cycle = [*stack[start:], task_id]
 
             add_issue(
                 issues,
@@ -817,7 +846,7 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
         description=(
             "Deterministic structural linter for strict-v1 "
             "OpenSpec tasks.md execution packets."
-        )
+        ),
     )
 
     parser.add_argument(

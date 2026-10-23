@@ -1,9 +1,11 @@
+import sys
 import unittest
 from pathlib import Path
 from unittest import mock
 
+from agentspec import cli
 from agentspec.cli import build_parser
-from agentspec.harness.openspec import pipeline
+from agentspec.harness.openspec import guard, pipeline
 
 
 def _gate(name, status):
@@ -13,9 +15,17 @@ def _gate(name, status):
 class PipelineTests(unittest.TestCase):
     def test_run_pipeline_returns_status_and_gates_keys(self):
         with (
-            mock.patch.object(pipeline, "_run_openspec_validate", return_value=_gate("openspec validate", "PASS")),
-            mock.patch.object(pipeline, "_run_lint_gate", return_value=_gate("lint", "PASS")),
-            mock.patch.object(pipeline, "_run_evidence_gate", return_value=_gate("evidence", "PASS")),
+            mock.patch.object(
+                pipeline,
+                "_run_openspec_validate",
+                return_value=_gate("openspec validate", "PASS"),
+            ),
+            mock.patch.object(
+                pipeline, "_run_lint_gate", return_value=_gate("lint", "PASS")
+            ),
+            mock.patch.object(
+                pipeline, "_run_evidence_gate", return_value=_gate("evidence", "PASS")
+            ),
         ):
             result = pipeline.run_pipeline("change", Path("."))
 
@@ -25,9 +35,17 @@ class PipelineTests(unittest.TestCase):
 
     def test_failing_evidence_gate_fails_pipeline(self):
         with (
-            mock.patch.object(pipeline, "_run_openspec_validate", return_value=_gate("openspec validate", "PASS")),
-            mock.patch.object(pipeline, "_run_lint_gate", return_value=_gate("lint", "PASS")),
-            mock.patch.object(pipeline, "_run_evidence_gate", return_value=_gate("evidence", "FAIL")),
+            mock.patch.object(
+                pipeline,
+                "_run_openspec_validate",
+                return_value=_gate("openspec validate", "PASS"),
+            ),
+            mock.patch.object(
+                pipeline, "_run_lint_gate", return_value=_gate("lint", "PASS")
+            ),
+            mock.patch.object(
+                pipeline, "_run_evidence_gate", return_value=_gate("evidence", "FAIL")
+            ),
         ):
             result = pipeline.run_pipeline("change", Path("."))
 
@@ -39,7 +57,11 @@ class PipelineTests(unittest.TestCase):
         evidence_mock = mock.Mock(return_value=_gate("evidence", "PASS"))
 
         with (
-            mock.patch.object(pipeline, "_run_openspec_validate", return_value=_gate("openspec validate", "TOOL_ERROR")),
+            mock.patch.object(
+                pipeline,
+                "_run_openspec_validate",
+                return_value=_gate("openspec validate", "TOOL_ERROR"),
+            ),
             mock.patch.object(pipeline, "_run_lint_gate", lint_mock),
             mock.patch.object(pipeline, "_run_evidence_gate", evidence_mock),
         ):
@@ -52,9 +74,17 @@ class PipelineTests(unittest.TestCase):
 
     def test_any_fail_yields_exit_code_1_and_lists_every_failing_gate(self):
         with (
-            mock.patch.object(pipeline, "_run_openspec_validate", return_value=_gate("openspec validate", "FAIL")),
-            mock.patch.object(pipeline, "_run_lint_gate", return_value=_gate("lint", "FAIL")),
-            mock.patch.object(pipeline, "_run_evidence_gate", return_value=_gate("evidence", "PASS")),
+            mock.patch.object(
+                pipeline,
+                "_run_openspec_validate",
+                return_value=_gate("openspec validate", "FAIL"),
+            ),
+            mock.patch.object(
+                pipeline, "_run_lint_gate", return_value=_gate("lint", "FAIL")
+            ),
+            mock.patch.object(
+                pipeline, "_run_evidence_gate", return_value=_gate("evidence", "PASS")
+            ),
         ):
             result = pipeline.run_pipeline("change", Path("."))
 
@@ -74,9 +104,13 @@ class PipelineTests(unittest.TestCase):
             return runner
 
         with (
-            mock.patch.object(pipeline, "_run_openspec_validate", record("openspec validate", "PASS")),
+            mock.patch.object(
+                pipeline, "_run_openspec_validate", record("openspec validate", "PASS")
+            ),
             mock.patch.object(pipeline, "_run_lint_gate", record("lint", "PASS")),
-            mock.patch.object(pipeline, "_run_evidence_gate", record("evidence", "PASS")),
+            mock.patch.object(
+                pipeline, "_run_evidence_gate", record("evidence", "PASS")
+            ),
         ):
             pipeline.run_pipeline("change", Path("."))
 
@@ -86,9 +120,17 @@ class PipelineTests(unittest.TestCase):
 class PipelineCoverageTests(unittest.TestCase):
     def test_pipeline_is_deterministic(self):
         patchers = [
-            mock.patch.object(pipeline, "_run_openspec_validate", return_value=_gate("openspec validate", "PASS")),
-            mock.patch.object(pipeline, "_run_lint_gate", return_value=_gate("lint", "FAIL")),
-            mock.patch.object(pipeline, "_run_evidence_gate", return_value=_gate("evidence", "PASS")),
+            mock.patch.object(
+                pipeline,
+                "_run_openspec_validate",
+                return_value=_gate("openspec validate", "PASS"),
+            ),
+            mock.patch.object(
+                pipeline, "_run_lint_gate", return_value=_gate("lint", "FAIL")
+            ),
+            mock.patch.object(
+                pipeline, "_run_evidence_gate", return_value=_gate("evidence", "PASS")
+            ),
         ]
 
         for patcher in patchers:
@@ -115,6 +157,34 @@ class PipelineCLITests(unittest.TestCase):
         self.assertEqual(args.openspec_command, "validate")
         self.assertEqual(args.change, "control-layer")
         self.assertTrue(args.json)
+
+    def test_guard_subcommand_exists(self):
+        parser = build_parser()
+
+        args, remaining = parser.parse_known_args(["openspec", "guard", "--json"])
+
+        self.assertEqual(args.openspec_command, "guard")
+        self.assertEqual(remaining, ["--json"])
+
+    def test_guard_dispatch_returns_guard_exit_code(self):
+        verdict = {
+            "status": "FAIL",
+            "exit_code": 1,
+            "scanned": 1,
+            "changes": [],
+            "issues": [],
+        }
+
+        with (
+            mock.patch.object(guard, "run_guard", return_value=verdict) as run,
+            mock.patch.object(
+                sys, "argv", ["agentspec", "openspec", "guard", "--json"]
+            ),
+        ):
+            exit_code = cli.main()
+
+        self.assertEqual(exit_code, 1)
+        run.assert_called_once()
 
 
 if __name__ == "__main__":

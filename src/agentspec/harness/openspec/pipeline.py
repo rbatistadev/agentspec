@@ -35,7 +35,11 @@ def _run_openspec_validate(change_name: str, repo_root: Path) -> dict:
         return _gate(
             "openspec validate",
             "TOOL_ERROR",
-            [_issue_dict("ERROR", "TOOL_ERROR", "openspec executable was not found on PATH.")],
+            [
+                _issue_dict(
+                    "ERROR", "TOOL_ERROR", "openspec executable was not found on PATH."
+                )
+            ],
         )
 
     command = [executable, "validate", "--strict", "--no-interactive", change_name]
@@ -50,12 +54,17 @@ def _run_openspec_validate(change_name: str, repo_root: Path) -> dict:
             cwd=str(repo_root),
             capture_output=True,
             text=True,
+            check=False,
         )
     except OSError as exc:
         return _gate(
             "openspec validate",
             "TOOL_ERROR",
-            [_issue_dict("ERROR", "TOOL_ERROR", f"Could not run openspec validate: {exc}")],
+            [
+                _issue_dict(
+                    "ERROR", "TOOL_ERROR", f"Could not run openspec validate: {exc}"
+                )
+            ],
         )
 
     if completed.returncode == 0:
@@ -113,7 +122,9 @@ def _run_lint_gate(change_name: str, repo_root: Path) -> dict:
     )
 
     has_error = any(issue.severity == "ERROR" for issue in issues)
-    return _gate("lint", "FAIL" if has_error else "PASS", [asdict(issue) for issue in issues])
+    return _gate(
+        "lint", "FAIL" if has_error else "PASS", [asdict(issue) for issue in issues]
+    )
 
 
 def _run_evidence_gate(change_name: str, repo_root: Path) -> dict:
@@ -131,7 +142,9 @@ def _run_evidence_gate(change_name: str, repo_root: Path) -> dict:
 
     issues = evidence.collect_evidence_issues(packets, change_root, repo_root)
     has_error = any(issue.severity == "ERROR" for issue in issues)
-    return _gate("evidence", "FAIL" if has_error else "PASS", [asdict(issue) for issue in issues])
+    return _gate(
+        "evidence", "FAIL" if has_error else "PASS", [asdict(issue) for issue in issues]
+    )
 
 
 def run_pipeline(change_name: str, repo_root: Path) -> dict:

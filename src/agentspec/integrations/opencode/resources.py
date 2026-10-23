@@ -52,6 +52,7 @@ def load_managed_commands() -> dict[str, str]:
     names = (
         "explore",
         "new",
+        "propose",
         "continue",
         "status",
         "update",

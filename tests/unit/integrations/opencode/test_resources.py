@@ -8,12 +8,12 @@ from agentspec.integrations.opencode.resources import (
     load_managed_commands,
 )
 
-
 EXPECTED_COMMANDS = {
     f"agentspec/openspec/{name}.md"
     for name in (
         "explore",
         "new",
+        "propose",
         "continue",
         "status",
         "update",
@@ -62,9 +62,7 @@ class OpenCodeResourcesTests(unittest.TestCase):
         self.assertGreaterEqual(recon.count("effect: deny"), 2)
 
     def test_orchestrator_routes_apply_to_the_apply_worker(self):
-        orchestrator = load_managed_agents()[
-            "agentspec-openspec-orchestrator.md"
-        ]
+        orchestrator = load_managed_agents()["agentspec-openspec-orchestrator.md"]
 
         self.assertIn(
             'resource: "agentspec-openspec-apply-worker"',
@@ -97,6 +95,13 @@ class OpenCodeResourcesTests(unittest.TestCase):
                 else "agentspec-openspec-orchestrator"
             )
             self.assertIn(f"agent: {expected_agent}", content)
+
+    def test_propose_command_routes_through_taskwriter_auditor_and_pipeline(self):
+        propose = load_managed_commands()["agentspec/openspec/propose.md"]
+
+        self.assertIn("agentspec-openspec-taskwriter", propose)
+        self.assertIn("agentspec-openspec-auditor", propose)
+        self.assertIn("agentspec openspec validate", propose)
 
     def test_resource_loading_is_independent_of_working_directory(self):
         original_directory = os.getcwd()

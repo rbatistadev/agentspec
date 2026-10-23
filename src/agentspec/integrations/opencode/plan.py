@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from agentspec.core.managed_blocks import (
@@ -14,7 +14,7 @@ from agentspec.core.paths import AgentSpecPaths
 MANAGED_FILE_MARKER = "<!-- agentspec:managed -->"
 
 
-class PlanAction(str, Enum):
+class PlanAction(StrEnum):
     CREATE = "CREATE"
     UPDATE = "UPDATE"
     NO_CHANGE = "NO_CHANGE"

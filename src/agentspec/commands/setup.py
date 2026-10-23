@@ -15,10 +15,7 @@ def _print_plan(plan) -> None:
     print("OpenCode")
     print()
 
-    print(
-        f"{plan.agents_md.action.value}: "
-        f"{plan.agents_md.path}"
-    )
+    print(f"{plan.agents_md.action.value}: {plan.agents_md.path}")
     print(f"  {plan.agents_md.reason}")
 
     for resource in (*plan.agents, *plan.commands):
