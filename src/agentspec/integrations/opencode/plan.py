@@ -1,34 +1,19 @@
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
 
-from agentspec.core.managed_blocks import (
-    ManagedBlockError,
-    upsert_managed_block,
+from agentspec.core.managed_files import (
+    FilePlan,
+    PlanAction,
+    content_digest,
+    plan_managed_block,
+    plan_managed_file,
+    plan_stale_managed_file,
 )
 from agentspec.core.paths import AgentSpecPaths
 
 MANAGED_FILE_MARKER = "<!-- agentspec:managed -->"
-
-
-class PlanAction(str, Enum):
-    CREATE = "CREATE"
-    UPDATE = "UPDATE"
-    NO_CHANGE = "NO_CHANGE"
-    BLOCKED = "BLOCKED"
-    DELETE = "DELETE"
-
-
-@dataclass(frozen=True)
-class FilePlan:
-    path: Path
-    action: PlanAction
-    reason: str
-    desired_content: str | None
-    current_digest: str | None
 
 
 @dataclass(frozen=True)
@@ -43,65 +28,6 @@ class OpenCodePlan:
     commands: tuple[FilePlan, ...]
 
 
-def content_digest(content: str) -> str:
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()
-
-
-def _read_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8")
-
-
-def _plan_agents_md(
-    path: Path,
-    desired_body: str,
-) -> FilePlan:
-    exists = path.exists()
-    current = _read_text(path) if exists else ""
-
-    try:
-        desired = upsert_managed_block(
-            current,
-            "openspec",
-            desired_body,
-        )
-    except ManagedBlockError as exc:
-        return FilePlan(
-            path=path,
-            action=PlanAction.BLOCKED,
-            reason=str(exc),
-            desired_content=None,
-            current_digest=content_digest(current) if exists else None,
-        )
-
-    if not exists:
-        return FilePlan(
-            path=path,
-            action=PlanAction.CREATE,
-            reason="Global AGENTS.md does not exist.",
-            desired_content=desired,
-            current_digest=None,
-        )
-
-    digest = content_digest(current)
-
-    if current == desired:
-        return FilePlan(
-            path=path,
-            action=PlanAction.NO_CHANGE,
-            reason="AgentSpec managed block is already current.",
-            desired_content=desired,
-            current_digest=digest,
-        )
-
-    return FilePlan(
-        path=path,
-        action=PlanAction.UPDATE,
-        reason="AgentSpec managed block differs from desired state.",
-        desired_content=desired,
-        current_digest=digest,
-    )
-
-
 def build_plan(
     paths: AgentSpecPaths,
     global_instructions: str,
@@ -113,17 +39,19 @@ def build_plan(
     managed_commands = managed_commands or {}
 
     agent_plans = tuple(
-        _plan_managed_file(
+        plan_managed_file(
             paths.opencode_agents_dir / filename,
             content,
+            MANAGED_FILE_MARKER,
         )
         for filename, content in managed_agents.items()
     )
 
     current_command_plans = tuple(
-        _plan_managed_file(
+        plan_managed_file(
             paths.opencode_commands_dir / relative_path,
             content,
+            MANAGED_FILE_MARKER,
         )
         for relative_path, content in managed_commands.items()
     )
@@ -131,8 +59,9 @@ def build_plan(
         plan
         for relative_path in stale_managed_commands
         if (
-            plan := _plan_stale_managed_file(
-                paths.opencode_commands_dir / relative_path
+            plan := plan_stale_managed_file(
+                paths.opencode_commands_dir / relative_path,
+                MANAGED_FILE_MARKER,
             )
         )
         is not None
@@ -140,8 +69,9 @@ def build_plan(
 
     return OpenCodePlan(
         config_dir=paths.opencode_config_dir,
-        agents_md=_plan_agents_md(
+        agents_md=plan_managed_block(
             paths.opencode_agents_md,
+            "openspec",
             global_instructions,
         ),
         agents_dir=paths.opencode_agents_dir,
@@ -151,78 +81,11 @@ def build_plan(
     )
 
 
-def _plan_managed_file(
-    path: Path,
-    desired_content: str,
-) -> FilePlan:
-    if MANAGED_FILE_MARKER not in desired_content:
-        return FilePlan(
-            path=path,
-            action=PlanAction.BLOCKED,
-            reason="AgentSpec source template has no managed-file marker.",
-            desired_content=None,
-            current_digest=None,
-        )
-
-    if not path.exists():
-        return FilePlan(
-            path=path,
-            action=PlanAction.CREATE,
-            reason="AgentSpec managed file does not exist.",
-            desired_content=desired_content,
-            current_digest=None,
-        )
-
-    current = _read_text(path)
-    digest = content_digest(current)
-
-    if current == desired_content:
-        return FilePlan(
-            path=path,
-            action=PlanAction.NO_CHANGE,
-            reason="AgentSpec managed file is already current.",
-            desired_content=desired_content,
-            current_digest=digest,
-        )
-
-    if MANAGED_FILE_MARKER not in current:
-        return FilePlan(
-            path=path,
-            action=PlanAction.BLOCKED,
-            reason=("Target file exists but is not marked as owned by AgentSpec."),
-            desired_content=None,
-            current_digest=digest,
-        )
-
-    return FilePlan(
-        path=path,
-        action=PlanAction.UPDATE,
-        reason="AgentSpec managed file differs from desired state.",
-        desired_content=desired_content,
-        current_digest=digest,
-    )
-
-
-def _plan_stale_managed_file(path: Path) -> FilePlan | None:
-    if not path.exists():
-        return None
-
-    current = _read_text(path)
-    digest = content_digest(current)
-
-    if MANAGED_FILE_MARKER not in current:
-        return FilePlan(
-            path=path,
-            action=PlanAction.BLOCKED,
-            reason="Obsolete target exists but is not marked as owned by AgentSpec.",
-            desired_content=None,
-            current_digest=digest,
-        )
-
-    return FilePlan(
-        path=path,
-        action=PlanAction.DELETE,
-        reason="Obsolete AgentSpec-managed resource must be removed.",
-        desired_content=None,
-        current_digest=digest,
-    )
+__all__ = [
+    "MANAGED_FILE_MARKER",
+    "FilePlan",
+    "OpenCodePlan",
+    "PlanAction",
+    "build_plan",
+    "content_digest",
+]

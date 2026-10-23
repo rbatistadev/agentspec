@@ -46,6 +46,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show the changes AgentSpec would make without applying them.",
     )
+    setup_parser.add_argument(
+        "--target",
+        choices=("opencode", "codex", "all"),
+        default="opencode",
+        help="Integration to configure (default: opencode).",
+    )
 
     openspec_parser = subparsers.add_parser(
         "openspec",
@@ -131,7 +137,7 @@ def main() -> int:
                 f"unrecognized arguments: {' '.join(remaining)}"
             )
 
-        return setup.run(dry_run=args.dry_run)
+        return setup.run(dry_run=args.dry_run, target=args.target)
 
     if (
         args.command == "openspec"
